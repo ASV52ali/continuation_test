@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+<meta charset="UTF-8">
+<title>FaceID Bale Sender</title>
+<style>
+body {
+    font-family: sans-serif;
+    text-align: center;
+    background: #f2f2f2;
+}
+#video {
+    width: 300px;
+    border: 3px solid #333;
+    border-radius: 10px;
+}
+button {
+    padding: 10px 20px;
+    font-size: 18px;
+    margin-top: 15px;
+}
+#result {
+    margin-top: 15px;
+    font-size: 18px;
+    font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<h2>Face ID CONTINUATION</h2>
+
+<video id="video" autoplay playsinline></video><br>
+<button onclick="capture()">📸 ثبت حضور </button>
+
+<div id="result"></div>
+
+<script>
+
+const BOT_TOKEN = "2086834694:UpTaAb1Y9FCL4GRvWL3S6VJAU0E_xD8JWKA";
+const CHAT_ID   = "1180806059";
+const ESP_IP    = "http://192.168.1.6";   // ←← IP ESP8266 را اینجا بگذار
+
+navigator.mediaDevices.getUserMedia({ video: true })
+  .then(stream => video.srcObject = stream)
+  .catch(err => alert("اجازه دسترسی به دوربین داده نشد!"));
+
+function capture() {
+    let video = document.getElementById('video');
+    let canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    let ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+
+    canvas.toBlob(blob => {
+        sendPhoto(blob);
+    }, "image/jpeg", 0.9);
+}
+
+function sendPhoto(imageBlob) {
+
+    let formData = new FormData();
+    formData.append("chat_id", CHAT_ID);
+    formData.append("photo", imageBlob, "face.jpg");
+
+    fetch(`https://tapi.bale.ai/bot${BOT_TOKEN}/sendPhoto`, {
+        method: "POST",
+        body: formData
+    })
+    .then(r => r.text())
+    .then(t => {
+        document.getElementById("result").innerHTML = "✔️ عکس ارسال شد!";
+        notifyESP();   // ← پس از ارسال عکس → به ESP پیام بده
+    })
+    .catch(e => {
+        document.getElementById("result").innerHTML = "❗ خطا در ارسال عکس";
+    });
+}
+
+function notifyESP() {
+    fetch(ESP_IP + "/face-ok")
+    .then(() => {
+        document.getElementById("result").innerHTML += "<br>📡 پیام به ESP ارسال شد";
+    })
+    .catch(() => {
+        document.getElementById("result").innerHTML += "<br>⚠️ خطا در ارسال پیام به ESP";
+    });
+}
+
+</script>
+
+</body>
+</html>
